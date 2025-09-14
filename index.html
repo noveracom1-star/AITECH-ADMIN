@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AITECH Admin Dashboard</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <style>
+    :root {
+      --primary: #1E90FF;
+      --primary-dark: #1674d6;
+      --accent: #f97316;
+      --accent-dark: #ea580c;
+      --dark: #1e293b;
+      --darker: #0f172a;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #334155;
+    }
+    .sidebar {
+      width: 280px;
+      background: linear-gradient(180deg, var(--primary-dark), var(--primary));
+      color: white;
+      transition: all 0.3s ease;
+    }
+    .main-content {
+      margin-left: 280px;
+      transition: all 0.3s ease;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+    }
+    .nav-item {
+      transition: all 0.2s ease;
+      border-radius: 8px;
+    }
+    .nav-item:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .nav-item.active {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    .btn-danger {
+      background-color: #ef4444;
+      transition: all 0.2s ease;
+    }
+    .btn-danger:hover {
+      background-color: #dc2626;
+      transform: translateY(-1px);
+    }
+    .table-row:hover {
+      background-color: #f8fafc;
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .slide-in {
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(-20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalFadeIn 0.3s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-body {
+      padding: 24px;
+    }
+    .modal-footer {
+      padding: 20px 24px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #334155;
+    }
+    .form-control {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(30, 144, 255, 0.2);
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-active {
+      background-color: #d1fae5;
+      color: #059669;
+    }
+    .badge-inactive {
+      background-color: #f3f4f6;
+      color: #6b7280;
+    }
+    .badge-pending {
+      background-color: #fef3c7;
+      color: #d97706;
+    }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .user-info-section {
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 24px;
+      margin-bottom: 24px;
+    }
+    .user-detail-label {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+    .user-detail-value {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .post-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .post-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .post-author {
+      display: flex;
+      align-items: center;
+      flex: 1;
+    }
+    .post-content {
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .post-media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .post-media-item {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 1 / 1;
+      background-color: #f1f5f9;
+    }
+    .post-media-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .post-media-item video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .post-actions {
+      display: flex;
+      gap: 16px;
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+    .post-action {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .post-action:hover {
+      color: #334155;
+    }
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+      .sidebar {
+        width: 240px;
+      }
+      .main-content {
+        margin-left: 240px;
+      }
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: fixed;
+        top: 0;
+        left: -100%;
+        height: 100vh;
+        z-index: 40;
+      }
+      .sidebar.active {
+        left: 0;
+      }
+      .main-content {
+        margin-left: 0;
+      }
+      .mobile-menu-btn {
+        display: block;
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #334155;
+        z-index: 50;
+      }
+    }
+    /* Enhanced table styles */
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .admin-table th,
+    .admin-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .admin-table th {
+      font-weight: 600;
+      color: #475569;
+      background-color: #f8fafc;
+    }
+    .admin-table tr:hover {
+      background-color: #f8fafc;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .action-btn {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .action-btn.edit {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+    .action-btn.edit:hover {
+      background-color: #bfdbfe;
+    }
+    .action-btn.delete {
+      background-color: #fee2e2;
+      color: #dc2626;
+    }
+    .action-btn.delete:hover {
+      background-color: #fecaca;
+    }
+    /* Loading states */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      color: #64748b;
+    }
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(30, 144, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    /* Toast notifications */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: translateX(100%);
+      opacity: 0;
+      transition: all 0.3s ease;
+      max-width: 400px;
+    }
+    .toast.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    .toast.success {
+      background-color: #d1fae5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+    .toast.error {
+      background-color: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    .toast.warning {
+      background-color: #fef3c7;
+      color: #d97706;
+      border: 1px solid #fed7aa;
+    }
+    .toast-icon {
+      width: 20px;
+      height: 20px;
+    }
+    /* Enhanced user profile modal */
+    .profile-section {
+      margin-bottom: 24px;
+    }
+    .profile-section h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #1e293b;
+    }
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .profile-field {
+      display: flex;
+      flex-direction: column;
+    }
+    .profile-field label {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .profile-field span {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    /* User activity timeline */
+    .timeline {
+      position: relative;
+      padding-left: 24px;
+      margin: 24px 0;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background-color: #e2e8f0;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 24px;
+      padding-left: 16px;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: var(--primary);
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px rgba(30, 144, 255, 0.2);
+    }
+    .timeline-item-date {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .timeline-item-content {
+      background-color: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border-left: 3px solid var(--primary);
+    }
+    /* Course progress bar */
+    .progress-container {
+      width: 100%;
+      height: 8px;
+      background-color: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background-color: var(--primary);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    /* Badge for user status */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-badge.active {
+      background-color: #d1fae5;
+      color: #059669;
+    }
+    .status-badge.inactive {
+      background-color: #f3f4f6;
+      color: #6b7280;
+    }
+    .status-badge.suspended {
+      background-color: #fee2e2;
+      color: #dc2626;
+    }
+    /* Enhanced community post view */
+    .post-viewer {
+      padding: 24px;
+    }
+    .post-viewer-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .post-viewer-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+    .post-viewer-content {
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .post-viewer-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .post-viewer-action {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background-color: #f8fafc;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
+    }
+    .post-viewer-action:hover {
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+    /* Meeting link management */
+    .meeting-link-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .meeting-link-form input[type="text"] {
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .meeting-link-form select {
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .meeting-link-form button {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .meeting-link-form button.primary {
+      background-color: var(--primary);
+      color: white;
+    }
+    .meeting-link-form button.primary:hover {
+      background-color: var(--primary-dark);
+    }
+    .meeting-link-form button.danger {
+      background-color: #ef4444;
+      color: white;
+    }
+    .meeting-link-form button.danger:hover {
+      background-color: #dc2626;
+    }
+    /* Responsive layout for small screens */
+    @media (max-width: 640px) {
+      .profile-grid {
+        grid-template-columns: 1fr;
+      }
+      .modal-content {
+        margin: 16px;
+        border-radius: 12px;
+      }
+      .modal-header, .modal-footer {
+        padding: 16px;
+      }
+      .modal-body {
+        padding: 16px;
+      }
+      .user-detail-value, .user-detail-label {
+        font-size: 0.875rem;
+      }
+      .post-media-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+  <!-- Sidebar -->
+  <div class="sidebar flex flex-col flex-shrink-0 h-full">
+    <div class="p-5 flex items-center">
+      <i data-lucide="atom" class="w-8 h-8 mr-3"></i>
+      <h1 class="text-xl font-bold">AITECH Admin</h1>
+    </div>
+    <nav class="flex-1 mt-8">
+      <ul class="space-y-2 px-4">
+        <li class="nav-item active p-3 cursor-pointer flex items-center" data-section="dashboard">
+          <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i>
+          <span>Dashboard</span>
+        </li>
+        <li class="nav-item p-3 cursor-pointer flex items-center" data-section="users">
+          <i data-lucide="users" class="w-5 h-5 mr-3"></i>
+          <span>User Management</span>
+        </li>
+        <li class="nav-item p-3 cursor-pointer flex items-center" data-section="meetings">
+          <i data-lucide="video" class="w-5 h-5 mr-3"></i>
+          <span>Meeting Links</span>
+        </li>
+        <li class="nav-item p-3 cursor-pointer flex items-center" data-section="community">
+          <i data-lucide="message-square" class="w-5 h-5 mr-3"></i>
+          <span>Community Posts</span>
+        </li>
+        <li class="nav-item p-3 cursor-pointer flex items-center" data-section="settings">
+          <i data-lucide="settings" class="w-5 h-5 mr-3"></i>
+          <span>Settings</span>
+        </li>
+      </ul>
+    </nav>
+    <div class="p-4 border-t border-white/10">
+      <div class="flex items-center p-3">
+        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mr-3">
+          <i data-lucide="user" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-sm font-medium">Admin User</p>
+          <p class="text-xs opacity-75">admin@aitech.com</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Main Content -->
+  <div class="main-content flex-1 flex flex-col overflow-hidden">
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 py-4 px-6 flex items-center justify-between">
+      <div class="flex items-center">
+        <button class="mobile-menu-btn md:hidden mr-4 p-2 rounded-lg hover:bg-slate-100">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <h2 class="text-xl font-semibold" id="page-title">Dashboard Overview</h2>
+      </div>
+      <div class="flex items-center space-x-4">
+        <div class="relative">
+          <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-slate-400"></i>
+          <input type="text" placeholder="Search..." class="pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64">
+        </div>
+        <div class="relative">
+          <button class="p-2 rounded-full hover:bg-slate-100" id="notificationBtn">
+            <i data-lucide="bell" class="w-5 h-5"></i>
+            <span class="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+          </button>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+          <i data-lucide="user" class="w-5 h-5"></i>
+        </div>
+      </div>
+    </header>
+    <!-- Main Content Area -->
+    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar" id="main-content">
+      <!-- Dashboard Section -->
+      <section id="dashboard-section" class="dashboard-section active">
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div class="card p-6 fade-in">
+            <div class="flex items-center">
+              <div class="p-3 rounded-lg bg-blue-100 text-blue-600 mr-4">
+                <i data-lucide="users" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <p class="text-sm text-slate-500">Total Users</p>
+                <h3 class="text-2xl font-bold" id="total-users">Loading...</h3>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="flex items-center text-sm text-green-600">
+                <i data-lucide="trending-up" class="w-4 h-4 mr-1"></i>
+                <span id="user-growth">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="card p-6 fade-in" style="animation-delay: 0.1s;">
+            <div class="flex items-center">
+              <div class="p-3 rounded-lg bg-green-100 text-green-600 mr-4">
+                <i data-lucide="video" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <p class="text-sm text-slate-500">Active Meetings</p>
+                <h3 class="text-2xl font-bold" id="active-meetings">Loading...</h3>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="flex items-center text-sm text-green-600">
+                <i data-lucide="trending-up" class="w-4 h-4 mr-1"></i>
+                <span id="meeting-growth">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="card p-6 fade-in" style="animation-delay: 0.2s;">
+            <div class="flex items-center">
+              <div class="p-3 rounded-lg bg-orange-100 text-orange-600 mr-4">
+                <i data-lucide="message-square" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <p class="text-sm text-slate-500">Community Posts</p>
+                <h3 class="text-2xl font-bold" id="total-posts">Loading...</h3>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="flex items-center text-sm text-green-600">
+                <i data-lucide="trending-up" class="w-4 h-4 mr-1"></i>
+                <span id="post-growth">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="card p-6 fade-in" style="animation-delay: 0.3s;">
+            <div class="flex items-center">
+              <div class="p-3 rounded-lg bg-purple-100 text-purple-600 mr-4">
+                <i data-lucide="book-open" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <p class="text-sm text-slate-500">Courses</p>
+                <h3 class="text-2xl font-bold" id="total-courses">Loading...</h3>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="flex items-center text-sm text-green-600">
+                <i data-lucide="plus" class="w-4 h-4 mr-1"></i>
+                <span id="course-growth">Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Charts and User Management -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <!-- User Registration Chart -->
+          <div class="card p-6">
+            <h3 class="text-lg font-semibold mb-4">User Registration Trend</h3>
+            <div class="h-80">
+              <canvas id="userChart"></canvas>
+            </div>
+          </div>
+          <!-- Recent Users -->
+          <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-semibold">Recent Users</h3>
+              <button class="text-sm text-blue-600 hover:text-blue-800" id="view-all-users">View All</button>
+            </div>
+            <div class="space-y-4 custom-scrollbar" style="max-height: 320px; overflow-y: auto;" id="recent-users">
+              <div class="loading">Loading recent users...</div>
+            </div>
+          </div>
+        </div>
+        <!-- Meeting Links and Community Posts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Meeting Links -->
+          <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-semibold">Google Meet Links</h3>
+              <button class="btn-primary px-4 py-2 rounded-lg text-white flex items-center" id="add-meeting-link">
+                <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Add Link
+              </button>
+            </div>
+            <div class="space-y-4 custom-scrollbar" style="max-height: 320px; overflow-y: auto;" id="meeting-links">
+              <div class="loading">Loading meeting links...</div>
+            </div>
+          </div>
+          <!-- Community Posts -->
+          <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-semibold">Recent Community Posts</h3>
+              <button class="text-sm text-blue-600 hover:text-blue-800" id="view-all-posts">View All</button>
+            </div>
+            <div class="space-y-4 custom-scrollbar" style="max-height: 320px; overflow-y: auto;" id="community-posts">
+              <div class="loading">Loading community posts...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- User Management Section -->
+      <section id="users-section" class="users-section hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">User Management</h2>
+          <button class="btn-primary px-4 py-2 rounded-lg text-white flex items-center" id="add-user-btn">
+            <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Add User
+          </button>
+        </div>
+        <div class="mb-6">
+          <div class="flex flex-wrap gap-4 mb-4">
+            <select id="user-status-filter" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending Verification</option>
+              <option value="suspended">Suspended</option>
+            </select>
+            <input type="text" id="user-search" placeholder="Search by name or email..." class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-list">
+              <tr>
+                <td colspan="5" class="text-center py-8">Loading users...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <!-- Meeting Links Section -->
+      <section id="meetings-section" class="meetings-section hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Meeting Links Management</h2>
+        </div>
+        <div class="mb-6">
+          <div class="flex flex-wrap gap-4 mb-4">
+            <select id="meeting-course-filter" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="all">All Courses</option>
+              <option value="HTML Foundations">HTML Foundations</option>
+              <option value="JavaScript Mastery">JavaScript Mastery</option>
+              <option value="Kotlin for Android">Kotlin for Android</option>
+              <option value="Python Data Structures">Python Data Structures</option>
+              <option value="SQL from Zero to Hero">SQL from Zero to Hero</option>
+              <option value="React & TypeScript">React & TypeScript</option>
+              <option value="DevOps & Cloud">DevOps & Cloud</option>
+            </select>
+            <select id="meeting-status-filter" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <input type="text" id="meeting-search" placeholder="Search by course name..." class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Meeting Link</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="meetings-list">
+              <tr>
+                <td colspan="5" class="text-center py-8">Loading meeting links...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <!-- Community Posts Section -->
+      <section id="community-section" class="community-section hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">Community Posts Management</h2>
+        </div>
+        <div class="mb-6">
+          <div class="flex flex-wrap gap-4 mb-4">
+            <select id="post-status-filter" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="all">All Status</option>
+              <option value="published">Published</option>
+              <option value="reported">Reported</option>
+              <option value="deleted">Deleted</option>
+            </select>
+            <input type="text" id="post-search" placeholder="Search by author or content..." class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Author</th>
+                <th>Content</th>
+                <th>Likes</th>
+                <th>Comments</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="posts-list">
+              <tr>
+                <td colspan="6" class="text-center py-8">Loading community posts...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <!-- Settings Section -->
+      <section id="settings-section" class="settings-section hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold">System Settings</h2>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="card p-6">
+            <h3 class="text-lg font-semibold mb-4">General Settings</h3>
+            <div class="space-y-4">
+              <div class="form-group">
+                <label class="form-label" for="app-name">Application Name</label>
+                <input type="text" id="app-name" class="form-control" value="AITECH">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="default-theme">Default Theme</label>
+                <select id="default-theme" class="form-control">
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="email-domain">Email Domain</label>
+                <input type="text" id="email-domain" class="form-control" value="@aitech.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="maintenance-mode">Maintenance Mode</label>
+                <div class="flex items-center">
+                  <input type="checkbox" id="maintenance-mode" class="mr-2">
+                  <span class="text-sm text-slate-600">Enable maintenance mode (disables public access)</span>
+                </div>
+              </div>
+            </div>
+            <div class="mt-6">
+              <button class="btn-primary px-4 py-2 rounded-lg text-white" id="save-settings">Save Settings</button>
+            </div>
+          </div>
+          <div class="card p-6">
+            <h3 class="text-lg font-semibold mb-4">Firebase Configuration</h3>
+            <div class="space-y-4">
+              <div class="form-group">
+                <label class="form-label" for="api-key">API Key</label>
+                <input type="text" id="api-key" class="form-control" value="AIzaSyAWYPeRhufEzgI9VBYyCQJTd8tIfSNohv0" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="auth-domain">Auth Domain</label>
+                <input type="text" id="auth-domain" class="form-control" value="aitech-1e85c.firebaseapp.com" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="project-id">Project ID</label>
+                <input type="text" id="project-id" class="form-control" value="aitech-1e85c" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="storage-bucket">Storage Bucket</label>
+                <input type="text" id="storage-bucket" class="form-control" value="aitech-1e85c.firebasestorage.app" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="messaging-id">Messaging Sender ID</label>
+                <input type="text" id="messaging-id" class="form-control" value="885179578065" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="app-id">App ID</label>
+                <input type="text" id="app-id" class="form-control" value="1:885179578065:web:0ffb403c06880422be37f0" readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="measurement-id">Measurement ID</label>
+                <input type="text" id="measurement-id" class="form-control" value="G-L40YLZJ8VS" readonly>
+              </div>
+            </div>
+            <div class="mt-6">
+              <button class="btn-primary px-4 py-2 rounded-lg text-white" id="test-firebase">Test Firebase Connection</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <!-- Add Meeting Link Modal -->
+  <div class="modal-overlay" id="add-meeting-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Meeting Link</h2>
+        <button class="close-modal" id="close-add-meeting-modal">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form class="meeting-link-form" id="add-meeting-form">
+          <div class="form-group">
+            <label class="form-label" for="course-name">Course Name</label>
+            <select id="course-name" class="form-control" required>
+              <option value="">Select a course</option>
+              <option value="HTML Foundations">HTML Foundations</option>
+              <option value="JavaScript Mastery">JavaScript Mastery</option>
+              <option value="Kotlin for Android">Kotlin for Android</option>
+              <option value="Python Data Structures">Python Data Structures</option>
+              <option value="SQL from Zero to Hero">SQL from Zero to Hero</option>
+              <option value="React & TypeScript">React & TypeScript</option>
+              <option value="DevOps & Cloud">DevOps & Cloud</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="meeting-link">Meeting Link</label>
+            <input type="text" id="meeting-link" class="form-control" placeholder="https://meet.google.com/abc-def-ghi" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="meeting-status">Status</label>
+            <select id="meeting-status" class="form-control" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="meeting-description">Description (Optional)</label>
+            <textarea id="meeting-description" class="form-control" rows="3" placeholder="Brief description of this meeting..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger action-btn" id="cancel-add-meeting">Cancel</button>
+        <button class="btn-primary action-btn" id="save-meeting">Save Link</button>
+      </div>
+    </div>
+  </div>
+  <!-- Edit Meeting Link Modal -->
+  <div class="modal-overlay" id="edit-meeting-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Meeting Link</h2>
+        <button class="close-modal" id="close-edit-meeting-modal">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form class="meeting-link-form" id="edit-meeting-form">
+          <input type="hidden" id="edit-meeting-id">
+          <div class="form-group">
+            <label class="form-label" for="edit-course-name">Course Name</label>
+            <select id="edit-course-name" class="form-control" required>
+              <option value="">Select a course</option>
+              <option value="HTML Foundations">HTML Foundations</option>
+              <option value="JavaScript Mastery">JavaScript Mastery</option>
+              <option value="Kotlin for Android">Kotlin for Android</option>
+              <option value="Python Data Structures">Python Data Structures</option>
+              <option value="SQL from Zero to Hero">SQL from Zero to Hero</option>
+              <option value="React & TypeScript">React & TypeScript</option>
+              <option value="DevOps & Cloud">DevOps & Cloud</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-meeting-link">Meeting Link</label>
+            <input type="text" id="edit-meeting-link" class="form-control" placeholder="https://meet.google.com/abc-def-ghi" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-meeting-status">Status</label>
+            <select id="edit-meeting-status" class="form-control" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-meeting-description">Description (Optional)</label>
+            <textarea id="edit-meeting-description" class="form-control" rows="3" placeholder="Brief description of this meeting..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger action-btn" id="cancel-edit-meeting">Cancel</button>
+        <button class="btn-primary action-btn" id="update-meeting">Update Link</button>
+      </div>
+    </div>
+  </div>
+  <!-- View User Details Modal -->
+  <div class="modal-overlay" id="view-user-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>User Profile</h2>
+        <button class="close-modal" id="close-view-user-modal">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="user-info-section">
+          <div class="flex items-center mb-6">
+            <div class="user-avatar bg-gray-500" id="user-avatar">
+              AE
+            </div>
+            <div class="ml-4">
+              <h3 class="text-xl font-bold" id="user-full-name">Loading...</h3>
+              <p class="text-slate-600" id="user-email">Loading...</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-semibold text-slate-700 mb-3">Account Information</h4>
+              <div class="space-y-3">
+                <div class="profile-field">
+                  <label class="user-detail-label">Status</label>
+                  <span class="user-detail-value" id="user-status">Loading...</span>
+                </div>
+                <div class="profile-field">
+                  <label class="user-detail-label">Email Verified</label>
+                  <span class="user-detail-value" id="user-email-verified">Loading...</span>
+                </div>
+                <div class="profile-field">
+                  <label class="user-detail-label">Date Joined</label>
+                  <span class="user-detail-value" id="user-joined-date">Loading...</span>
+                </div>
+                <div class="profile-field">
+                  <label class="user-detail-label">Last Login</label>
+                  <span class="user-detail-value" id="user-last-login">Loading...</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 class="font-semibold text-slate-700 mb-3">User Statistics</h4>
+              <div class="space-y-3">
+                <div class="profile-field">
+                  <label class="user-detail-label">Courses Completed</label>
+                  <span class="user-detail-value" id="user-courses-completed">Loading...</span>
+                </div>
+                <div class="profile-field">
+                  <label class="user-detail-label">Streak Days</label>
+                  <span class="user-detail-value" id="user-streak-days">Loading...</span>
+                </div>
+                <div class="profile-field">
+                  <label class="user-detail-label">Total Points</label>
+                  <span class="user-detail-value" id="user-total-points">Loading...</span>
+                </div>
+                <div class="profile-field">
+                  <label class="user-detail-label">Projects Submitted</label>
+                  <span class="user-detail-value" id="user-projects-submitted">Loading...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <h3>Activity Timeline</h3>
+          <div class="timeline" id="user-activity-timeline">
+            <div class="loading">Loading activity history...</div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <h3>Recent Posts</h3>
+          <div id="user-recent-posts" class="space-y-4">
+            <div class="loading">Loading recent posts...</div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <h3>Actions</h3>
+          <div class="flex gap-4">
+            <button class="btn-primary action-btn" id="verify-user">Verify Email</button>
+            <button class="btn-danger action-btn" id="suspend-user">Suspend Account</button>
+            <button class="btn-danger action-btn" id="delete-user">Delete Account</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary action-btn" id="close-view-user">Close</button>
+      </div>
+    </div>
+  </div>
+  <!-- View Community Post Modal -->
+  <div class="modal-overlay" id="view-post-modal">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
+      <div class="modal-header">
+        <h2>Community Post Details</h2>
+        <button class="close-modal" id="close-view-post-modal">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="modal-body post-viewer">
+        <div class="post-viewer-header">
+          <div class="post-author">
+            <div class="user-avatar bg-gray-500" id="post-author-avatar">
+              AE
+            </div>
+            <div class="ml-3">
+              <h3 class="font-bold" id="post-author-name">Loading...</h3>
+              <p class="text-slate-600" id="post-author-email">Loading...</p>
+            </div>
+          </div>
+          <div class="post-viewer-meta" id="post-meta">
+            Loading...
+          </div>
+        </div>
+        <div class="post-viewer-content" id="post-content">
+          Loading...
+        </div>
+        <div id="post-media-container" class="post-media-grid">
+          <!-- Media items will be inserted here -->
+        </div>
+        <div class="post-viewer-actions">
+          <div class="post-viewer-action" id="post-likes-count">
+            <i data-lucide="heart" class="w-4 h-4"></i>
+            <span id="post-likes">0</span>
+          </div>
+          <div class="post-viewer-action" id="post-comments-count">
+            <i data-lucide="message-square" class="w-4 h-4"></i>
+            <span id="post-comments">0</span>
+          </div>
+          <div class="post-viewer-action" id="post-report">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            <span>Report</span>
+          </div>
+        </div>
+        <div class="mt-6">
+          <h3 class="font-semibold mb-3">Comments</h3>
+          <div id="post-comments-list" class="space-y-4">
+            <div class="loading">Loading comments...</div>
+          </div>
+        </div>
+        <div class="mt-6">
+          <h3 class="font-semibold mb-3">Actions</h3>
+          <div class="flex gap-4">
+            <button class="btn-primary action-btn" id="approve-post">Approve</button>
+            <button class="btn-danger action-btn" id="delete-post">Delete</button>
+            <button class="btn-danger action-btn" id="report-post">Mark as Reported</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary action-btn" id="close-view-post">Close</button>
+      </div>
+    </div>
+  </div>
+  <!-- Toast Notifications -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+  <script>
+    // Initialize Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAWYPeRhufEzgI9VBYyCQJTd8tIfSNohv0",
+      authDomain: "aitech-1e85c.firebaseapp.com",
+      projectId: "aitech-1e85c",
+      storageBucket: "aitech-1e85c.firebasestorage.app",
+      messagingSenderId: "885179578065",
+      appId: "1:885179578065:web:0ffb403c06880422be37f0",
+      measurementId: "G-L40YLZJ8VS"
+    };
+    // Initialize Firebase only once
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    } else {
+      console.warn('Firebase app already initialized.');
+    }
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    // Utility functions
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <div class="toast-icon">
+          ${type === 'success' ? '<i data-lucide="check-circle" class="w-5 h-5"></i>' : 
+            type === 'error' ? '<i data-lucide="alert-circle" class="w-5 h-5"></i>' : 
+            '<i data-lucide="alert-triangle" class="w-5 h-5"></i>'}
+        </div>
+        <span>${message}</span>
+      `;
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('show');
+      }, 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 5000);
+    }
+    function formatTimestamp(timestamp) {
+      if (!timestamp) return 'Unknown';
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+    function generateInitials(name) {
+      if (!name) return 'AE';
+      return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    }
+    function hideLoading(selector) {
+      const loadingElement = document.querySelector(`${selector} .loading`);
+      if (loadingElement) loadingElement.remove();
+    }
+    function showLoading(selector) {
+      const container = document.querySelector(selector);
+      if (container && !container.querySelector('.loading')) {
+        container.innerHTML = `<div class="loading">Loading...</div>`;
+      }
+    }
+    // Initialize Lucide icons
+    lucide.createIcons();
+    // Navigation functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('[id$="-section"]');
+      navItems.forEach(item => {
+        item.addEventListener('click', function() {
+          // Remove active class from all items
+          navItems.forEach(i => i.classList.remove('active'));
+          sections.forEach(section => section.classList.add('hidden'));
+          // Add active class to clicked item
+          this.classList.add('active');
+          // Show corresponding section
+          const sectionId = this.getAttribute('data-section');
+          document.getElementById(`${sectionId}-section`).classList.remove('hidden');
+          // Update page title
+          document.getElementById('page-title').textContent = this.querySelector('span').textContent;
+          // Load data for the section if needed
+          loadSectionData(sectionId);
+        });
+      });
+      // Mobile menu toggle
+      const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+      const sidebar = document.querySelector('.sidebar');
+      if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+          sidebar.classList.toggle('active');
+        });
+      }
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', (e) => {
+        if (sidebar.classList.contains('active') && 
+            !sidebar.contains(e.target) && 
+            !mobileMenuBtn.contains(e.target)) {
+          sidebar.classList.remove('active');
+        }
+      });
+      // Initialize all sections with data
+      loadSectionData('dashboard');
+    });
+    // Load data for specific section
+    async function loadSectionData(sectionId) {
+      switch(sectionId) {
+        case 'dashboard':
+          await loadDashboardData();
+          break;
+        case 'users':
+          await loadUsersData();
+          break;
+        case 'meetings':
+          await loadMeetingsData();
+          break;
+        case 'community':
+          await loadCommunityPostsData();
+          break;
+        case 'settings':
+          await loadSettingsData();
+          break;
+      }
+    }
+    // Load dashboard data
+    async function loadDashboardData() {
+      try {
+        // Total Users
+        const usersSnapshot = await db.collection('users').get();
+        const totalUsers = usersSnapshot.size;
+        document.getElementById('total-users').textContent = totalUsers.toLocaleString();
+        // Active Meetings
+        const meetingsSnapshot = await db.collection('meetingLinks').where('status', '==', 'active').get();
+        const activeMeetings = meetingsSnapshot.size;
+        document.getElementById('active-meetings').textContent = activeMeetings.toLocaleString();
+        // Community Posts
+        const postsSnapshot = await db.collection('posts').get();
+        const totalPosts = postsSnapshot.size;
+        document.getElementById('total-posts').textContent = totalPosts.toLocaleString();
+        // Courses (from meeting links)
+        const coursesSet = new Set();
+        meetingsSnapshot.docs.forEach(doc => {
+          coursesSet.add(doc.data().courseName);
+        });
+        document.getElementById('total-courses').textContent = coursesSet.size;
+        // User growth (last week vs current week)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        let lastWeekUsers = 0;
+        let thisWeekUsers = 0;
+        usersSnapshot.docs.forEach(doc => {
+          const createdAt = doc.data().createdAt;
+          if (!createdAt) return;
+          const createdAtDate = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+          if (createdAtDate >= sevenDaysAgo) {
+            thisWeekUsers++;
+          } else {
+            lastWeekUsers++;
+          }
+        });
+        const userGrowthPercent = Math.round((thisWeekUsers - lastWeekUsers) / lastWeekUsers * 100) || 0;
+        document.getElementById('user-growth').textContent = `${userGrowthPercent > 0 ? '+' : ''}${userGrowthPercent}% from last week`;
+        // Meeting growth
+        const fourWeeksAgo = new Date();
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        let lastMonthMeetings = 0;
+        let thisMonthMeetings = 0;
+        const allMeetingsSnapshot = await db.collection('meetingLinks').get();
+        allMeetingsSnapshot.docs.forEach(doc => {
+          const createdAt = doc.data().createdAt;
+          if (!createdAt) return;
+          const createdAtDate = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+          if (createdAtDate >= fourWeeksAgo) {
+            thisMonthMeetings++;
+          } else {
+            lastMonthMeetings++;
+          }
+        });
+        const meetingGrowthPercent = Math.round((thisMonthMeetings - lastMonthMeetings) / lastMonthMeetings * 100) || 0;
+        document.getElementById('meeting-growth').textContent = `${meetingGrowthPercent > 0 ? '+' : ''}${meetingGrowthPercent}% from last month`;
+        // Post growth
+        const threeWeeksAgo = new Date();
+        threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
+        let lastThreeWeeksPosts = 0;
+        let thisThreeWeeksPosts = 0;
+        postsSnapshot.docs.forEach(doc => {
+          const createdAt = doc.data().createdAt;
+          if (!createdAt) return;
+          const createdAtDate = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+          if (createdAtDate >= threeWeeksAgo) {
+            thisThreeWeeksPosts++;
+          } else {
+            lastThreeWeeksPosts++;
+          }
+        });
+        const postGrowthPercent = Math.round((thisThreeWeeksPosts - lastThreeWeeksPosts) / lastThreeWeeksPosts * 100) || 0;
+        document.getElementById('post-growth').textContent = `${postGrowthPercent > 0 ? '+' : ''}${postGrowthPercent}% from last 3 weeks`;
+        // Course growth
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        let lastTwoWeeksCourses = 0;
+        let thisTwoWeeksCourses = 0;
+        allMeetingsSnapshot.docs.forEach(doc => {
+          const createdAt = doc.data().createdAt;
+          if (!createdAt) return;
+          const createdAtDate = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+          if (createdAtDate >= twoWeeksAgo) {
+            thisTwoWeeksCourses++;
+          } else {
+            lastTwoWeeksCourses++;
+          }
+        });
+        const courseGrowthPercent = Math.round((thisTwoWeeksCourses - lastTwoWeeksCourses) / lastTwoWeeksCourses * 100) || 0;
+        document.getElementById('course-growth').textContent = `${courseGrowthPercent > 0 ? '+' : ''}${courseGrowthPercent}% from last 2 weeks`;
+        // Recent Users
+        const recentUsersContainer = document.getElementById('recent-users');
+        recentUsersContainer.innerHTML = '';
+        const recentUsers = usersSnapshot.docs
+          .sort((a, b) => b.data().createdAt.toDate() - a.data().createdAt.toDate())
+          .slice(0, 5);
+        recentUsers.forEach(userDoc => {
+          const userData = userDoc.data();
+          const userCard = document.createElement('div');
+          userCard.className = 'flex items-center justify-between p-3 bg-slate-50 rounded-lg slide-in';
+          userCard.innerHTML = `
+            <div class="flex items-center">
+              <div class="w-10 h-10 rounded-full ${userData.profilePicture ? 'bg-cover' : 'bg-blue-600'} flex items-center justify-center mr-3" style="${userData.profilePicture ? `background-image: url('${userData.profilePicture}')` : ''}">
+                ${!userData.profilePicture ? `<span class="text-sm font-semibold">${generateInitials(userData.name)}</span>` : ''}
+              </div>
+              <div>
+                <p class="font-medium">${userData.name || 'Anonymous'}</p>
+                <p class="text-sm text-slate-500">${userData.email}</p>
+              </div>
+            </div>
+            <span class="px-2 py-1 ${
+              userData.status === 'active' ? 'bg-green-100 text-green-800' : 
+              userData.status === 'suspended' ? 'bg-red-100 text-red-800' : 
+              'bg-yellow-100 text-yellow-800'
+            } text-xs rounded-full">
+              ${capitalize(userData.status || 'pending')}
+            </span>
+          `;
+          // Add click event to view user details
+          userCard.addEventListener('click', () => {
+            openViewUserModal(userDoc.id, userData);
+          });
+          recentUsersContainer.appendChild(userCard);
+        });
+        // User Registration Chart
+        const ctx = document.getElementById('userChart').getContext('2d');
+        const userChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+            datasets: [{
+              label: 'New Users',
+              data: [65, 78, 90, 81, 96, 125, 140, 168, 194],
+              borderColor: '#1E90FF',
+              backgroundColor: 'rgba(30, 144, 255, 0.1)',
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  drawBorder: false
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }
+        });
+        // Meeting Links
+        const meetingLinksContainer = document.getElementById('meeting-links');
+        meetingLinksContainer.innerHTML = '';
+        const meetingLinks = await db.collection('meetingLinks').orderBy('createdAt', 'desc').limit(5).get();
+        if (meetingLinks.empty) {
+          meetingLinksContainer.innerHTML = '<div class="text-center py-8 text-slate-500">No meeting links found.</div>';
+          return;
+        }
+        meetingLinks.forEach(doc => {
+          const data = doc.data();
+          const meetingLinkCard = document.createElement('div');
+          meetingLinkCard.className = 'p-4 border border-slate-200 rounded-lg slide-in';
+          meetingLinkCard.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+              <h4 class="font-medium">${data.courseName}</h4>
+              <div class="flex space-x-2">
+                <button class="edit-meeting-link text-blue-600 hover:text-blue-800" data-id="${doc.id}">
+                  <i data-lucide="edit" class="w-4 h-4"></i>
+                </button>
+                <button class="delete-meeting-link text-red-600 hover:text-red-800" data-id="${doc.id}">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+            <p class="text-sm text-slate-500 mb-2">${data.meetingLink}</p>
+            <div class="flex justify-between items-center text-xs text-slate-500">
+              <span>Created: ${formatTimestamp(data.createdAt)}</span>
+              <span class="px-2 py-1 ${
+                data.status === 'active' ? 'bg-green-100 text-green-800 rounded-full' : 'bg-gray-100 text-gray-800 rounded-full'
+              }">
+                ${capitalize(data.status)}
+              </span>
+            </div>
+          `;
+          meetingLinksContainer.appendChild(meetingLinkCard);
+        });
+        // Add event listeners for edit and delete buttons
+        document.querySelectorAll('.edit-meeting-link').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            openEditMeetingModal(id);
+          });
+        });
+        document.querySelectorAll('.delete-meeting-link').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            if (confirm('Are you sure you want to delete this meeting link? This action cannot be undone.')) {
+              try {
+                await db.collection('meetingLinks').doc(id).delete();
+                showToast('Meeting link deleted successfully!', 'success');
+                loadDashboardData(); // Refresh data
+              } catch (error) {
+                showToast('Failed to delete meeting link: ' + error.message, 'error');
+              }
+            }
+          });
+        });
+        // Community Posts
+        const communityPostsContainer = document.getElementById('community-posts');
+        communityPostsContainer.innerHTML = '';
+        const communityPosts = await db.collection('posts').orderBy('createdAt', 'desc').limit(5).get();
+        if (communityPosts.empty) {
+          communityPostsContainer.innerHTML = '<div class="text-center py-8 text-slate-500">No community posts found.</div>';
+          return;
+        }
+        communityPosts.forEach(doc => {
+          const data = doc.data();
+          const postCard = document.createElement('div');
+          postCard.className = 'p-4 border border-slate-200 rounded-lg slide-in';
+          postCard.innerHTML = `
+            <div class="flex items-center mb-3">
+              <div class="w-8 h-8 rounded-full ${data.authorPhoto ? 'bg-cover' : 'bg-blue-600'} flex items-center justify-center mr-2" style="${data.authorPhoto ? `background-image: url('${data.authorPhoto}')` : ''}">
+                ${!data.authorPhoto ? `<span class="text-xs font-semibold">${generateInitials(data.authorName)}</span>` : ''}
+              </div>
+              <div>
+                <p class="text-sm font-medium">${data.authorName}</p>
+                <p class="text-xs text-slate-500">${formatTimestamp(data.createdAt)}</p>
+              </div>
+            </div>
+            <p class="text-sm mb-2">${data.text}</p>
+            ${data.media && data.media.length > 0 ? `
+              <div class="flex space-x-2 mb-3">
+                ${data.media.slice(0, 2).map(media => 
+                  media.resource_type === 'image' ? 
+                    `<div class="w-16 h-16 bg-slate-200 rounded-lg overflow-hidden">
+                      <img src="${media.url}" alt="Post image" class="w-full h-full object-cover">
+                    </div>` :
+                    media.resource_type === 'video' ?
+                      `<div class="w-16 h-16 bg-slate-200 rounded-lg overflow-hidden">
+                        <video src="${media.url}" muted autoplay loop class="w-full h-full object-cover"></video>
+                      </div>` :
+                      `<div class="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center">
+                        <i data-lucide="file" class="w-6 h-6 text-slate-400"></i>
+                      </div>`
+                ).join('')}
+              </div>
+            ` : ''}
+            <div class="flex items-center text-xs text-slate-500">
+              <div class="flex items-center mr-3">
+                <i data-lucide="heart" class="w-3 h-3 mr-1"></i>
+                <span>${data.likesCount || 0}</span>
+              </div>
+              <div class="flex items-center">
+                <i data-lucide="message-square" class="w-3 h-3 mr-1"></i>
+                <span>${data.commentsCount || 0}</span>
+              </div>
+            </div>
+          `;
+          // Add click event to view post details
+          postCard.addEventListener('click', () => {
+            openViewPostModal(doc.id, data);
+          });
+          communityPostsContainer.appendChild(postCard);
+        });
+        // Add event listener for view all buttons
+        document.getElementById('view-all-users').addEventListener('click', () => {
+          document.querySelector('.nav-item[data-section="users"]').click();
+        });
+        document.getElementById('view-all-posts').addEventListener('click', () => {
+          document.querySelector('.nav-item[data-section="community"]').click();
+        });
+        // Add event listener for add meeting link button
+        document.getElementById('add-meeting-link').addEventListener('click', () => {
+          openAddMeetingModal();
+        });
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showToast('Failed to load dashboard data: ' + error.message, 'error');
+      }
+    }
+    // Load users data
+    async function loadUsersData() {
+      try {
+        showLoading('#users-list');
+        const usersSnapshot = await db.collection('users').orderBy('createdAt', 'desc').get();
+        const usersList = document.getElementById('users-list');
+        usersList.innerHTML = '';
+        if (usersSnapshot.empty) {
+          usersList.innerHTML = '<tr><td colspan="5" class="text-center py-8">No users found.</td></tr>';
+          hideLoading('#users-list');
+          return;
+        }
+        usersSnapshot.forEach(doc => {
+          const userData = doc.data();
+          const row = document.createElement('tr');
+          row.className = 'transition-colors hover:bg-slate-50';
+          row.innerHTML = `
+            <td class="py-4">${userData.name || 'Anonymous'}</td>
+            <td class="py-4">${userData.email}</td>
+            <td class="py-4">
+              <span class="px-2 py-1 text-xs rounded-full ${
+                userData.status === 'active' ? 'bg-green-100 text-green-800' : 
+                userData.status === 'suspended' ? 'bg-red-100 text-red-800' : 
+                'bg-yellow-100 text-yellow-800'
+              }">
+                ${capitalize(userData.status || 'pending')}
+              </span>
+            </td>
+            <td class="py-4">${formatDate(userData.createdAt.toDate())}</td>
+            <td class="py-4">
+              <div class="action-buttons">
+                <button class="action-btn edit" data-id="${doc.id}">View</button>
+                <button class="action-btn delete" data-id="${doc.id}">Delete</button>
+              </div>
+            </td>
+          `;
+          usersList.appendChild(row);
+        });
+        // Add event listeners to buttons
+        document.querySelectorAll('.action-btn.edit').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const userId = e.currentTarget.dataset.id;
+            openViewUserModal(userId);
+          });
+        });
+        document.querySelectorAll('.action-btn.delete').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const userId = e.currentTarget.dataset.id;
+            if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+              try {
+                await db.collection('users').doc(userId).delete();
+                showToast('User deleted successfully!', 'success');
+                loadUsersData();
+              } catch (error) {
+                showToast('Failed to delete user: ' + error.message, 'error');
+              }
+            }
+          });
+        });
+        hideLoading('#users-list');
+        // Add search and filter functionality
+        document.getElementById('user-search').addEventListener('input', filterUsers);
+        document.getElementById('user-status-filter').addEventListener('change', filterUsers);
+        function filterUsers() {
+          const searchTerm = document.getElementById('user-search').value.toLowerCase();
+          const statusFilter = document.getElementById('user-status-filter').value;
+          document.querySelectorAll('#users-list tr').forEach(row => {
+            const name = row.cells[0].textContent.toLowerCase();
+            const email = row.cells[1].textContent.toLowerCase();
+            const status = row.cells[2].querySelector('span').textContent.toLowerCase();
+            const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
+            const matchesStatus = statusFilter === 'all' || status === statusFilter.toLowerCase();
+            row.style.display = matchesSearch && matchesStatus ? '' : 'none';
+          });
+        }
+      } catch (error) {
+        console.error('Error loading users data:', error);
+        showToast('Failed to load users data: ' + error.message, 'error');
+      }
+    }
+    // Load meetings data
+    async function loadMeetingsData() {
+      try {
+        showLoading('#meetings-list');
+        const meetingsSnapshot = await db.collection('meetingLinks').orderBy('createdAt', 'desc').get();
+        const meetingsList = document.getElementById('meetings-list');
+        meetingsList.innerHTML = '';
+        if (meetingsSnapshot.empty) {
+          meetingsList.innerHTML = '<tr><td colspan="5" class="text-center py-8">No meeting links found.</td></tr>';
+          hideLoading('#meetings-list');
+          return;
+        }
+        meetingsSnapshot.forEach(doc => {
+          const meetingData = doc.data();
+          const row = document.createElement('tr');
+          row.className = 'transition-colors hover:bg-slate-50';
+          row.innerHTML = `
+            <td class="py-4">${meetingData.courseName}</td>
+            <td class="py-4">
+              <a href="${meetingData.meetingLink}" target="_blank" class="text-blue-600 hover:underline truncate max-w-xs inline-block" title="${meetingData.meetingLink}">
+                ${meetingData.meetingLink}
+              </a>
+            </td>
+            <td class="py-4">
+              <span class="px-2 py-1 text-xs rounded-full ${
+                meetingData.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+              }">
+                ${capitalize(meetingData.status)}
+              </span>
+            </td>
+            <td class="py-4">${formatDate(meetingData.createdAt.toDate())}</td>
+            <td class="py-4">
+              <div class="action-buttons">
+                <button class="action-btn edit" data-id="${doc.id}">Edit</button>
+                <button class="action-btn delete" data-id="${doc.id}">Delete</button>
+              </div>
+            </td>
+          `;
+          meetingsList.appendChild(row);
+        });
+        // Add event listeners to buttons
+        document.querySelectorAll('.action-btn.edit').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const meetingId = e.currentTarget.dataset.id;
+            openEditMeetingModal(meetingId);
+          });
+        });
+        document.querySelectorAll('.action-btn.delete').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const meetingId = e.currentTarget.dataset.id;
+            if (confirm('Are you sure you want to delete this meeting link? This action cannot be undone.')) {
+              try {
+                await db.collection('meetingLinks').doc(meetingId).delete();
+                showToast('Meeting link deleted successfully!', 'success');
+                loadMeetingsData();
+              } catch (error) {
+                showToast('Failed to delete meeting link: ' + error.message, 'error');
+              }
+            }
+          });
+        });
+        hideLoading('#meetings-list');
+        // Add search and filter functionality
+        document.getElementById('meeting-search').addEventListener('input', filterMeetings);
+        document.getElementById('meeting-course-filter').addEventListener('change', filterMeetings);
+        document.getElementById('meeting-status-filter').addEventListener('change', filterMeetings);
+        function filterMeetings() {
+          const searchTerm = document.getElementById('meeting-search').value.toLowerCase();
+          const courseFilter = document.getElementById('meeting-course-filter').value;
+          const statusFilter = document.getElementById('meeting-status-filter').value;
+          document.querySelectorAll('#meetings-list tr').forEach(row => {
+            const course = row.cells[0].textContent.toLowerCase();
+            const link = row.cells[1].textContent.toLowerCase();
+            const status = row.cells[2].querySelector('span').textContent.toLowerCase();
+            const matchesSearch = course.includes(searchTerm) || link.includes(searchTerm);
+            const matchesCourse = courseFilter === 'all' || course === courseFilter.toLowerCase();
+            const matchesStatus = statusFilter === 'all' || status === statusFilter.toLowerCase();
+            row.style.display = matchesSearch && matchesCourse && matchesStatus ? '' : 'none';
+          });
+        }
+      } catch (error) {
+        console.error('Error loading meetings data:', error);
+        showToast('Failed to load meeting links data: ' + error.message, 'error');
+      }
+    }
+    // Load community posts data
+    async function loadCommunityPostsData() {
+      try {
+        showLoading('#posts-list');
+        const postsSnapshot = await db.collection('posts').orderBy('createdAt', 'desc').get();
+        const postsList = document.getElementById('posts-list');
+        postsList.innerHTML = '';
+        if (postsSnapshot.empty) {
+          postsList.innerHTML = '<tr><td colspan="6" class="text-center py-8">No community posts found.</td></tr>';
+          hideLoading('#posts-list');
+          return;
+        }
+        postsSnapshot.forEach(doc => {
+          const postData = doc.data();
+          const row = document.createElement('tr');
+          row.className = 'transition-colors hover:bg-slate-50';
+          row.innerHTML = `
+            <td class="py-4">${postData.authorName || 'Anonymous'}</td>
+            <td class="py-4 truncate max-w-xs" title="${postData.text}">${postData.text.length > 50 ? postData.text.substring(0, 50) + '...' : postData.text}</td>
+            <td class="py-4">${postData.likesCount || 0}</td>
+            <td class="py-4">${postData.commentsCount || 0}</td>
+            <td class="py-4">
+              <span class="px-2 py-1 text-xs rounded-full ${
+                postData.isDeleted ? 'bg-red-100 text-red-800' : 
+                postData.isReported ? 'bg-yellow-100 text-yellow-800' : 
+                'bg-green-100 text-green-800'
+              }">
+                ${postData.isDeleted ? 'Deleted' : postData.isReported ? 'Reported' : 'Published'}
+              </span>
+            </td>
+            <td class="py-4">
+              <div class="action-buttons">
+                <button class="action-btn edit" data-id="${doc.id}">View</button>
+                <button class="action-btn delete" data-id="${doc.id}">Delete</button>
+              </div>
+            </td>
+          `;
+          postsList.appendChild(row);
+        });
+        // Add event listeners to buttons
+        document.querySelectorAll('.action-btn.edit').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const postId = e.currentTarget.dataset.id;
+            openViewPostModal(postId);
+          });
+        });
+        document.querySelectorAll('.action-btn.delete').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const postId = e.currentTarget.dataset.id;
+            if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+              try {
+                await db.collection('posts').doc(postId).delete();
+                showToast('Post deleted successfully!', 'success');
+                loadCommunityPostsData();
+              } catch (error) {
+                showToast('Failed to delete post: ' + error.message, 'error');
+              }
+            }
+          });
+        });
+        hideLoading('#posts-list');
+        // Add search and filter functionality
+        document.getElementById('post-search').addEventListener('input', filterPosts);
+        document.getElementById('post-status-filter').addEventListener('change', filterPosts);
+        function filterPosts() {
+          const searchTerm = document.getElementById('post-search').value.toLowerCase();
+          const statusFilter = document.getElementById('post-status-filter').value;
+          document.querySelectorAll('#posts-list tr').forEach(row => {
+            const author = row.cells[0].textContent.toLowerCase();
+            const content = row.cells[1].textContent.toLowerCase();
+            const status = row.cells[4].querySelector('span').textContent.toLowerCase();
+            const matchesSearch = author.includes(searchTerm) || content.includes(searchTerm);
+            const matchesStatus = statusFilter === 'all' || status === statusFilter.toLowerCase();
+            row.style.display = matchesSearch && matchesStatus ? '' : 'none';
+          });
+        }
+      } catch (error) {
+        console.error('Error loading community posts data:', error);
+        showToast('Failed to load community posts data: ' + error.message, 'error');
+      }
+    }
+    // Load settings data
+    async function loadSettingsData() {
+      try {
+        // Get app settings from Firestore
+        const settingsDoc = await db.collection('settings').doc('general').get();
+        if (settingsDoc.exists) {
+          const settings = settingsDoc.data();
+          document.getElementById('app-name').value = settings.appName || 'AITECH';
+          document.getElementById('default-theme').value = settings.defaultTheme || 'light';
+          document.getElementById('email-domain').value = settings.emailDomain || '@aitech.com';
+          document.getElementById('maintenance-mode').checked = settings.maintenanceMode || false;
+        }
+        // Add save settings handler
+        document.getElementById('save-settings').addEventListener('click', async () => {
+          try {
+            await db.collection('settings').doc('general').set({
+              appName: document.getElementById('app-name').value,
+              defaultTheme: document.getElementById('default-theme').value,
+              emailDomain: document.getElementById('email-domain').value,
+              maintenanceMode: document.getElementById('maintenance-mode').checked,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            showToast('Settings saved successfully!', 'success');
+          } catch (error) {
+            showToast('Failed to save settings: ' + error.message, 'error');
+          }
+        });
+        // Add test firebase connection handler
+        document.getElementById('test-firebase').addEventListener('click', async () => {
+          try {
+            // Test authentication
+            const user = auth.currentUser;
+            const userExists = user !== null;
+            // Test database connectivity
+            await db.collection('users').limit(1).get();
+            // Test storage connectivity
+            await storage.ref().child('test').putString('test');
+            showToast('Firebase connection successful! All services are working.', 'success');
+          } catch (error) {
+            showToast('Firebase connection failed: ' + error.message, 'error');
+          }
+        });
+      } catch (error) {
+        console.error('Error loading settings data:', error);
+        showToast('Failed to load settings: ' + error.message, 'error');
+      }
+    }
+    // Open add meeting link modal
+    function openAddMeetingModal() {
+      document.getElementById('add-meeting-form').reset();
+      document.getElementById('course-name').value = '';
+      document.getElementById('meeting-link').value = '';
+      document.getElementById('meeting-status').value = 'active';
+      document.getElementById('meeting-description').value = '';
+      document.getElementById('add-meeting-modal').classList.add('active');
+    }
+    // Open edit meeting link modal
+    async function openEditMeetingModal(meetingId) {
+      try {
+        const meetingDoc = await db.collection('meetingLinks').doc(meetingId).get();
+        if (!meetingDoc.exists) {
+          showToast('Meeting link not found.', 'error');
+          return;
+        }
+        const meetingData = meetingDoc.data();
+        document.getElementById('edit-meeting-id').value = meetingId;
+        document.getElementById('edit-course-name').value = meetingData.courseName || '';
+        document.getElementById('edit-meeting-link').value = meetingData.meetingLink || '';
+        document.getElementById('edit-meeting-status').value = meetingData.status || 'active';
+        document.getElementById('edit-meeting-description').value = meetingData.description || '';
+        document.getElementById('edit-meeting-modal').classList.add('active');
+      } catch (error) {
+        console.error('Error loading meeting link:', error);
+        showToast('Failed to load meeting link: ' + error.message, 'error');
+      }
+    }
+    // Open view user modal
+    async function openViewUserModal(userId, userData = null) {
+      try {
+        if (!userData) {
+          const userDoc = await db.collection('users').doc(userId).get();
+          if (!userDoc.exists) {
+            showToast('User not found.', 'error');
+            return;
+          }
+          userData = userDoc.data();
+        }
+        // Populate user info
+        document.getElementById('user-full-name').textContent = userData.name || 'Anonymous';
+        document.getElementById('user-email').textContent = userData.email || 'N/A';
+        document.getElementById('user-status').textContent = capitalize(userData.status || 'pending');
+        document.getElementById('user-email-verified').textContent = userData.emailVerified ? 'Yes' : 'No';
+        document.getElementById('user-joined-date').textContent = formatTimestamp(userData.createdAt);
+        document.getElementById('user-last-login').textContent = userData.lastLogin ? formatTimestamp(userData.lastLogin) : 'Never';
+        // User statistics
+        document.getElementById('user-courses-completed').textContent = userData.coursesCompleted || 0;
+        document.getElementById('user-streak-days').textContent = userData.streak || 0;
+        document.getElementById('user-total-points').textContent = userData.points || 0;
+        document.getElementById('user-projects-submitted').textContent = userData.projects || 0;
+        // User avatar
+        const avatarEl = document.getElementById('user-avatar');
+        if (userData.profilePicture) {
+          avatarEl.style.backgroundImage = `url(${userData.profilePicture})`;
+          avatarEl.style.backgroundSize = 'cover';
+          avatarEl.style.backgroundPosition = 'center';
+        } else {
+          avatarEl.style.backgroundImage = 'none';
+          avatarEl.textContent = generateInitials(userData.name);
+        }
+        // Activity timeline
+        const activityTimeline = document.getElementById('user-activity-timeline');
+        activityTimeline.innerHTML = '';
+        // Fetch user activity logs
+        const activityLogs = await db.collection('userActivity')
+          .where('userId', '==', userId)
+          .orderBy('timestamp', 'desc')
+          .limit(10)
+          .get();
+        if (activityLogs.empty) {
+          activityTimeline.innerHTML = '<div class="text-center py-4 text-slate-500">No activity recorded yet.</div>';
+        } else {
+          activityLogs.forEach(log => {
+            const logItem = document.createElement('div');
+            logItem.className = 'timeline-item';
+            logItem.innerHTML = `
+              <div class="timeline-item-date">${formatTimestamp(log.data().timestamp)}</div>
+              <div class="timeline-item-content">${log.data().action}</div>
+            `;
+            activityTimeline.appendChild(logItem);
+          });
+        }
+        // Recent posts
+        const recentPostsContainer = document.getElementById('user-recent-posts');
+        recentPostsContainer.innerHTML = '';
+        const userPosts = await db.collection('posts')
+          .where('authorUid', '==', userId)
+          .orderBy('createdAt', 'desc')
+          .limit(5)
+          .get();
+        if (userPosts.empty) {
+          recentPostsContainer.innerHTML = '<div class="text-center py-4 text-slate-500">No posts yet.</div>';
+        } else {
+          userPosts.forEach(post => {
+            const postEl = document.createElement('div');
+            postEl.className = 'p-3 bg-slate-50 rounded-lg';
+            postEl.innerHTML = `
+              <p class="text-sm mb-2">${post.data().text.length > 100 ? post.data().text.substring(0, 100) + '...' : post.data().text}</p>
+              <div class="flex items-center text-xs text-slate-500">
+                <span class="mr-3">${formatTimestamp(post.data().createdAt)}</span>
+                <span class="mr-3">${post.data().likesCount || 0} likes</span>
+                <span>${post.data().commentsCount || 0} comments</span>
+              </div>
+            `;
+            recentPostsContainer.appendChild(postEl);
+          });
+        }
+        // Add event listeners to actions
+        document.getElementById('verify-user').addEventListener('click', async () => {
+          try {
+            await db.collection('users').doc(userId).update({
+              emailVerified: true,
+              status: 'active'
+            });
+            showToast('User email verified and account activated!', 'success');
+            openViewUserModal(userId); // Refresh modal
+          } catch (error) {
+            showToast('Failed to verify email: ' + error.message, 'error');
+          }
+        });
+        document.getElementById('suspend-user').addEventListener('click', async () => {
+          if (confirm('Are you sure you want to suspend this user? They will not be able to access the system until reactivated.')) {
+            try {
+              await db.collection('users').doc(userId).update({
+                status: 'suspended'
+              });
+              showToast('User account suspended!', 'success');
+              openViewUserModal(userId); // Refresh modal
+            } catch (error) {
+              showToast('Failed to suspend user: ' + error.message, 'error');
+            }
+          }
+        });
+        document.getElementById('delete-user').addEventListener('click', async () => {
+          if (confirm('Are you sure you want to delete this user? This action cannot be undone and will permanently remove all their data.')) {
+            try {
+              // Delete user from auth
+              await auth.deleteUser(userId);
+              // Delete user from firestore
+              await db.collection('users').doc(userId).delete();
+              // Delete all user's posts
+              const posts = await db.collection('posts').where('authorUid', '==', userId).get();
+              posts.forEach(async (post) => {
+                await db.collection('posts').doc(post.id).delete();
+              });
+              // Delete all user's activity logs
+              const activities = await db.collection('userActivity').where('userId', '==', userId).get();
+              activities.forEach(async (activity) => {
+                await db.collection('userActivity').doc(activity.id).delete();
+              });
+              showToast('User account and all associated data deleted!', 'success');
+              document.getElementById('view-user-modal').classList.remove('active');
+            } catch (error) {
+              showToast('Failed to delete user: ' + error.message, 'error');
+            }
+          }
+        });
+        document.getElementById('view-user-modal').classList.add('active');
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        showToast('Failed to load user data: ' + error.message, 'error');
+      }
+    }
+    // Open view post modal
+    async function openViewPostModal(postId, postData = null) {
+      try {
+        if (!postData) {
+          const postDoc = await db.collection('posts').doc(postId).get();
+          if (!postDoc.exists) {
+            showToast('Post not found.', 'error');
+            return;
+          }
+          postData = postDoc.data();
+        }
+        // Populate post info
+        document.getElementById('post-author-name').textContent = postData.authorName || 'Anonymous';
+        document.getElementById('post-author-email').textContent = postData.authorEmail || 'N/A';
+        // Author avatar
+        const avatarEl = document.getElementById('post-author-avatar');
+        if (postData.authorPhoto) {
+          avatarEl.style.backgroundImage = `url(${postData.authorPhoto})`;
+          avatarEl.style.backgroundSize = 'cover';
+          avatarEl.style.backgroundPosition = 'center';
+        } else {
+          avatarEl.style.backgroundImage = 'none';
+          avatarEl.textContent = generateInitials(postData.authorName);
+        }
+        // Meta information
+        document.getElementById('post-meta').innerHTML = `
+          <span>${formatTimestamp(postData.createdAt)}</span>
+          <span>•</span>
+          <span>${postData.likesCount || 0} likes</span>
+          <span>•</span>
+          <span>${postData.commentsCount || 0} comments</span>
+        `;
+        // Post content
+        document.getElementById('post-content').textContent = postData.text || '';
+        // Media container
+        const mediaContainer = document.getElementById('post-media-container');
+        mediaContainer.innerHTML = '';
+        if (postData.media && postData.media.length > 0) {
+          postData.media.forEach(media => {
+            const mediaEl = document.createElement('div');
+            mediaEl.className = 'rounded-md overflow-hidden border';
+            if (media.resource_type === 'image') {
+              const img = document.createElement('img');
+              img.src = media.url;
+              img.className = 'w-full h-32 object-cover';
+              mediaEl.appendChild(img);
+            } else if (media.resource_type === 'video') {
+              const vid = document.createElement('video');
+              vid.src = media.url;
+              vid.controls = true;
+              vid.className = 'w-full max-h-40';
+              mediaEl.appendChild(vid);
+            } else {
+              const link = document.createElement('a');
+              link.href = media.url;
+              link.target = '_blank';
+              link.className = 'block p-2 text-xs';
+              link.innerHTML = `
+                <div class="flex items-center justify-between">
+                  <div class="truncate">${media.filename || media.public_id}</div>
+                  <div class="text-slate-500 text-[10px]">Download</div>
+                </div>
+              `;
+              mediaEl.appendChild(link);
+            }
+            mediaContainer.appendChild(mediaEl);
+          });
+        } else {
+          mediaContainer.innerHTML = '<div class="col-span-1 text-center py-4 text-slate-500">No media attached.</div>';
+        }
+        // Likes and comments count
+        document.getElementById('post-likes').textContent = postData.likesCount || 0;
+        document.getElementById('post-comments').textContent = postData.commentsCount || 0;
+        // Comments list
+        const commentsList = document.getElementById('post-comments-list');
+        commentsList.innerHTML = '';
+        const comments = await db.collection('postComments')
+          .where('postId', '==', postId)
+          .orderBy('createdAt', 'asc')
+          .get();
+        if (comments.empty) {
+          commentsList.innerHTML = '<div class="text-center py-4 text-slate-500">No comments yet.</div>';
+        } else {
+          comments.forEach(comment => {
+            const commentEl = document.createElement('div');
+            commentEl.className = 'p-3 bg-slate-50 rounded-lg';
+            commentEl.innerHTML = `
+              <div class="flex items-center mb-2">
+                <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center mr-2 text-xs font-semibold">
+                  ${generateInitials(comment.data().authorName)}
+                </div>
+                <div>
+                  <p class="text-sm font-medium">${comment.data().authorName}</p>
+                  <p class="text-xs text-slate-500">${formatTimestamp(comment.data().createdAt)}</p>
+                </div>
+              </div>
+              <p class="text-sm">${comment.data().content}</p>
+            `;
+            commentsList.appendChild(commentEl);
+          });
+        }
+        // Action buttons
+        document.getElementById('approve-post').addEventListener('click', async () => {
+          try {
+            await db.collection('posts').doc(postId).update({
+              isDeleted: false,
+              isReported: false,
+              status: 'approved'
+            });
+            showToast('Post approved successfully!', 'success');
+            openViewPostModal(postId); // Refresh modal
+          } catch (error) {
+            showToast('Failed to approve post: ' + error.message, 'error');
+          }
+        });
+        document.getElementById('delete-post').addEventListener('click', async () => {
+          if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+            try {
+              await db.collection('posts').doc(postId).update({
+                isDeleted: true,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              showToast('Post deleted successfully!', 'success');
+              openViewPostModal(postId); // Refresh modal
+            } catch (error) {
+              showToast('Failed to delete post: ' + error.message, 'error');
+            }
+          }
+        });
+        document.getElementById('report-post').addEventListener('click', async () => {
+          try {
+            await db.collection('posts').doc(postId).update({
+              isReported: true,
+              reportedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            showToast('Post marked as reported!', 'success');
+            openViewPostModal(postId); // Refresh modal
+          } catch (error) {
+            showToast('Failed to report post: ' + error.message, 'error');
+          }
+        });
+        document.getElementById('view-post-modal').classList.add('active');
+      } catch (error) {
+        console.error('Error loading post data:', error);
+        showToast('Failed to load post data: ' + error.message, 'error');
+      }
+    }
+    // Save meeting link
+    document.getElementById('save-meeting').addEventListener('click', async () => {
+      const courseId = document.getElementById('course-name').value;
+      const meetingLink = document.getElementById('meeting-link').value;
+      const status = document.getElementById('meeting-status').value;
+      const description = document.getElementById('meeting-description').value;
+      if (!courseId || !meetingLink) {
+        showToast('Course name and meeting link are required.', 'error');
+        return;
+      }
+      try {
+        await db.collection('meetingLinks').add({
+          courseName: courseId,
+          meetingLink: meetingLink,
+          status: status,
+          description: description || '',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Meeting link added successfully!', 'success');
+        document.getElementById('add-meeting-modal').classList.remove('active');
+        document.getElementById('add-meeting-form').reset();
+        // Refresh dashboard data
+        loadDashboardData();
+      } catch (error) {
+        console.error('Error adding meeting link:', error);
+        showToast('Failed to add meeting link: ' + error.message, 'error');
+      }
+    });
+    // Update meeting link
+    document.getElementById('update-meeting').addEventListener('click', async () => {
+      const meetingId = document.getElementById('edit-meeting-id').value;
+      const courseId = document.getElementById('edit-course-name').value;
+      const meetingLink = document.getElementById('edit-meeting-link').value;
+      const status = document.getElementById('edit-meeting-status').value;
+      const description = document.getElementById('edit-meeting-description').value;
+      if (!meetingId || !courseId || !meetingLink) {
+        showToast('All fields are required.', 'error');
+        return;
+      }
+      try {
+        await db.collection('meetingLinks').doc(meetingId).update({
+          courseName: courseId,
+          meetingLink: meetingLink,
+          status: status,
+          description: description || '',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Meeting link updated successfully!', 'success');
+        document.getElementById('edit-meeting-modal').classList.remove('active');
+        // Refresh data
+        loadMeetingsData();
+        loadDashboardData();
+      } catch (error) {
+        console.error('Error updating meeting link:', error);
+        showToast('Failed to update meeting link: ' + error.message, 'error');
+      }
+    });
+    // Close modals
+    document.querySelectorAll('.close-modal').forEach(button => {
+      button.addEventListener('click', () => {
+        button.closest('.modal-overlay').classList.remove('active');
+      });
+    });
+    document.querySelectorAll('.action-btn.cancel, .action-btn.close').forEach(button => {
+      button.addEventListener('click', () => {
+        button.closest('.modal-overlay').classList.remove('active');
+      });
+    });
+    // Close modals when clicking outside
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+        }
+      });
+    });
+    // ========== AUTH STATE LISTENER (FIXED TO PREVENT REDIRECT LOOP) ==========
+    // Log every auth state change for debugging
+    console.log('Firebase initialized. Waiting for auth state change...');
+    auth.onAuthStateChanged(async (user) => {
+      const currentPath = window.location.pathname;
+      // Debug logging
+      console.log('Auth state changed:', user ? 'User signed in' : 'No user', '| Current path:', currentPath);
+      // Prevent redirect loop: Only redirect if NOT already on index.html
+      if (currentPath.endsWith('index.html')) {
+        console.log('Already on index.html. Skipping redirect.');
+        return;
+      }
+      if (user) {
+        try {
+          console.log('User UID:', user.uid, '- Checking admin role...');
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            if (userData.role !== 'admin') {
+              console.log('User is not an admin. Redirecting to index.html...');
+              window.location.href = 'index.html';
+              return;
+            } else {
+              console.log('User is admin. No redirect needed.');
+            }
+          } else {
+            console.log('User document does not exist in users collection. Redirecting to index.html...');
+            window.location.href = 'index.html';
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          window.location.href = 'index.html';
+          return;
+        }
+      } else {
+        console.log('No user signed in. Redirecting to index.html...');
+        window.location.href = 'index.html';
+        return;
+      }
+    });
+    // Initialize all sections
+    loadSectionData('dashboard');
+  </script>
+</body>
+</html>

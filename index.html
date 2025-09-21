@@ -802,15 +802,28 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Meeting Links -->
           <div class="card p-6">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-semibold">Google Meet Links</h3>
-              <button class="btn-primary px-4 py-2 rounded-lg text-white flex items-center" id="add-meeting-link">
-                <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Add Link
-              </button>
-            </div>
-            <div class="space-y-4 custom-scrollbar" style="max-height: 320px; overflow-y: auto;" id="meeting-links">
-              <div class="loading">Loading meeting links...</div>
-            </div>
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Google Meet Links</h3>
+                <div class="flex items-center gap-3">
+                  <!-- Inline Live Link input (stores to Firestore collection `live_links`) -->
+                  <input type="text" id="live-link-url" placeholder="https://example.com/live" class="form-control" style="min-width:240px;" />
+                  <input type="text" id="live-link-title" placeholder="Title (optional)" class="form-control" style="min-width:180px;" />
+                  <button class="btn-primary px-4 py-2 rounded-lg text-white flex items-center" id="add-live-link-btn">
+                    <i data-lucide="link" class="w-4 h-4 mr-1"></i> Add Live Link
+                  </button>
+                  <button class="btn-primary px-4 py-2 rounded-lg text-white flex items-center" id="add-meeting-link">
+                    <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Add Link
+                  </button>
+                </div>
+              </div>
+              <div class="space-y-4 custom-scrollbar" style="max-height: 180px; overflow-y: auto;" id="meeting-links">
+                <div class="loading">Loading meeting links...</div>
+              </div>
+              <hr class="my-3" />
+              <h4 class="text-sm font-medium mb-2">Live Links (stored in Firestore)</h4>
+              <div id="live-links" class="space-y-2 custom-scrollbar" style="max-height: 160px; overflow-y: auto;">
+                <div class="loading">Loading live links...</div>
+              </div>
           </div>
           <!-- Community Posts -->
           <div class="card p-6">
@@ -2427,6 +2440,73 @@
     });
     // Initialize all sections
     loadSectionData('dashboard');
+    // ---------- Live Links: Add, realtime listener, delete ----------
+    // Add live link button handler
+    document.getElementById('add-live-link-btn').addEventListener('click', async () => {
+      const urlEl = document.getElementById('live-link-url');
+      const titleEl = document.getElementById('live-link-title');
+      const url = (urlEl.value || '').trim();
+      const title = (titleEl.value || '').trim();
+      if (!url) {
+        showToast('Please enter a live link URL.', 'error');
+        return;
+      }
+      try {
+        await db.collection('live_links').add({
+          url: url,
+          title: title || null,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Live link saved to Firestore.', 'success');
+        urlEl.value = '';
+        titleEl.value = '';
+      } catch (err) {
+        console.error('Error saving live link:', err);
+        showToast('Failed to save live link: ' + err.message, 'error');
+      }
+    });
+
+    // Realtime listener to display live links
+    const liveLinksContainer = document.getElementById('live-links');
+    db.collection('live_links').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+      liveLinksContainer.innerHTML = '';
+      if (snapshot.empty) {
+        liveLinksContainer.innerHTML = '<div class="text-center py-4 text-slate-500">No live links found.</div>';
+        return;
+      }
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const item = document.createElement('div');
+        item.className = 'p-2 border rounded-lg flex items-center justify-between bg-white';
+        item.innerHTML = `
+          <div class="truncate">
+            <a href="${data.url}" target="_blank" class="text-blue-600 hover:underline font-medium truncate max-w-xs" title="${data.url}">${data.title || data.url}</a>
+            <div class="text-xs text-slate-500">${data.title ? data.url : ''}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="text-sm text-red-600 delete-live-link" data-id="${doc.id}">Delete</button>
+          </div>
+        `;
+        liveLinksContainer.appendChild(item);
+      });
+      // attach delete handlers
+      document.querySelectorAll('.delete-live-link').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.currentTarget.dataset.id;
+          if (!confirm('Delete this live link?')) return;
+          try {
+            await db.collection('live_links').doc(id).delete();
+            showToast('Live link deleted.', 'success');
+          } catch (err) {
+            console.error('Error deleting live link:', err);
+            showToast('Failed to delete live link: ' + err.message, 'error');
+          }
+        });
+      });
+    }, err => {
+      console.error('Live links listener error:', err);
+      liveLinksContainer.innerHTML = '<div class="text-center py-4 text-slate-500">Could not load live links.</div>';
+    });
   </script>
 </body>
 </html>
